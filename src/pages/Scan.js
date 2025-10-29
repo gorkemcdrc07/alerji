@@ -88,7 +88,7 @@ const Scan = () => {
                             <CircularProgress sx={{ mt: 2 }} />
                         </Box>
                     ) : (
-                        // Tarayıcı kapalıyken gösterilecek ikon
+                        // Tarayıcı kapalıyken gösterilecek ikon deneme1
                         <QrCodeScannerIcon
                             sx={{
                                 fontSize: 100,
