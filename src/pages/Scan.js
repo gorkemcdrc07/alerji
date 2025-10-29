@@ -3,35 +3,33 @@ import { Typography, Box, Button, Paper, Stack, CircularProgress } from '@mui/ma
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 import { useNavigate } from 'react-router-dom';
-import { QrReader } from 'react-qr-reader'; // Yeni kütüphanemiz
+import { BrowserMultiFormatReader } from '@zxing/library';
+import { useZxing } from 'react-zxing';
 
 const Scan = () => {
     const navigate = useNavigate();
-    // Tarayıcı (kamera) görünürlüğünü yönetmek için state
     const [isScanning, setIsScanning] = useState(false);
-    // Hata mesajlarını tutmak için state
     const [error, setError] = useState('');
 
-    // Tarama işlemi başarılı olduğunda çalışacak fonksiyon
-    const handleScan = (data) => {
-        if (data) {
-            // Tarama başarılı, state'i sıfırla ve sonucu yönlendir
+    const { ref } = useZxing({
+        onResult(result) {
+            if (result?.getText()) {
+                setIsScanning(false);
+                setError('');
+                navigate(`/result/${result.getText()}`);
+            }
+        },
+        onError(err) {
+            console.error(err);
+            setError('Kamera açılamadı veya bir hata oluştu. Lütfen izinleri kontrol edin.');
             setIsScanning(false);
-            setError('');
-            // Barkod numarasını alıp 'result' sayfasına yönlendir
-            navigate(`/result/${data.text}`);
-        }
-    };
-
-    // Tarama sırasında hata oluşursa çalışacak fonksiyon
-    const handleError = (err) => {
-        console.error(err);
-        setError('Kamera açılamadı veya bir hata oluştu. Lütfen izinleri kontrol edin.');
-    };
+        },
+        constraints: { facingMode: 'environment' }, // Arka kamerayı kullan
+    });
 
     const startScan = () => {
         setIsScanning(true);
-        setError(''); // Hata varsa temizle
+        setError('');
     };
 
     const stopScan = () => {
@@ -48,7 +46,7 @@ const Scan = () => {
                 alignItems: 'center',
                 textAlign: 'center',
                 p: 3,
-                gap: 3 // Bileşenler arasına boşluk ekledik
+                gap: 3
             }}
         >
             <Paper
@@ -58,79 +56,43 @@ const Scan = () => {
                     borderRadius: 4,
                     bgcolor: 'white',
                     width: '100%',
-                    maxWidth: 400, // Biraz daha genişlettik
-                    // Tarayıcı çerçevesi efekti
+                    maxWidth: 400,
                     border: '4px solid',
-                    borderColor: isScanning ? 'error.main' : 'primary.main', // Taramadayken farklı renk
+                    borderColor: isScanning ? 'error.main' : 'primary.main',
                     boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
                 }}
             >
                 <Stack spacing={2} alignItems="center">
-
-                    {/* Tarayıcı Alanı */}
                     {isScanning ? (
-                        <Box sx={{ width: '100%', height: 300, overflow: 'hidden', borderRadius: 2 }}>
-                            {/* QrReader Bileşeni */}
-                            <QrReader
-                                onResult={(result, error) => {
-                                    if (!!result) {
-                                        handleScan(result);
-                                    }
-
-                                    if (!!error && error.name !== "NotFoundError") {
-                                        handleError(error);
-                                    }
-                                }}
-                                style={{ width: '100%' }}
-                                constraints={{ facingMode: "environment" }} // Arka kamerayı kullanmayı tercih et
-                                containerStyle={{ paddingTop: '0' }} // Varsayılan padding'i kaldır
-                            />
-                            <CircularProgress sx={{ mt: 2 }} />
+                        <Box sx={{ width: '100%', height: 300, overflow: 'hidden', borderRadius: 2, position: 'relative' }}>
+                            <video ref={ref} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <CircularProgress sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-12px', ml: '-12px' }} />
                         </Box>
                     ) : (
-                        // Tarayıcı kapalıyken gösterilecek ikon deneme1
                         <QrCodeScannerIcon
                             sx={{
                                 fontSize: 100,
                                 color: 'primary.dark',
                                 transition: 'transform 0.3s ease-in-out',
-                                '&:hover': {
-                                    transform: 'scale(1.05)'
-                                }
+                                '&:hover': { transform: 'scale(1.05)' }
                             }}
                         />
                     )}
 
-                    <Typography
-                        variant="h5"
-                        component="h1"
-                        fontWeight="bold"
-                        color="primary.main"
-                        gutterBottom
-                    >
+                    <Typography variant="h5" component="h1" fontWeight="bold" color="primary.main" gutterBottom>
                         {isScanning ? 'Tarama Başlatıldı...' : 'Ürün Tarama Alanı'}
                     </Typography>
 
-                    <Typography
-                        variant="body2"
-                        color="text.secondary"
-                    >
+                    <Typography variant="body2" color="text.secondary">
                         {isScanning
                             ? 'Barkodu veya QR kodu kamera alanına ortalayın.'
-                            : 'Alerji kontrolü için barkodu taramak üzere butona basın.'
-                        }
+                            : 'Alerji kontrolü için barkodu taramak üzere butona basın.'}
                     </Typography>
 
-                    {/* Hata Mesajı */}
-                    {error && (
-                        <Typography variant="body2" color="error">
-                            {error}
-                        </Typography>
-                    )}
+                    {error && <Typography variant="body2" color="error">{error}</Typography>}
                 </Stack>
             </Paper>
 
-            {/* Tarama Butonu */}
             {!isScanning ? (
                 <Button
                     variant="contained"
@@ -167,7 +129,6 @@ const Scan = () => {
                 </Button>
             )}
 
-            {/* Simülasyon butonu sadece test için kalsın */}
             <Button
                 variant="outlined"
                 color="secondary"
@@ -177,7 +138,6 @@ const Scan = () => {
             >
                 Simülasyonla Test Et (869000000001)
             </Button>
-
         </Box>
     );
 };

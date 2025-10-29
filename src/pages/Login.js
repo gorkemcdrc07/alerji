@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Navigate } from 'react-router-dom';
 import {
     Container,
     Box,
@@ -9,7 +9,7 @@ import {
     Button,
     Alert,
     Link,
-    CircularProgress // Yüklenme animasyonu için
+    CircularProgress
 } from '@mui/material';
 
 const Login = () => {
@@ -22,10 +22,12 @@ const Login = () => {
     const { signIn, signUp, user } = useAuth();
     const navigate = useNavigate();
 
-    if (user) {
-        navigate('/', { replace: true });
-        return null;
-    }
+    // 🚨 user varsa yönlendirmeyi useEffect ile yap
+    useEffect(() => {
+        if (user) {
+            navigate('/', { replace: true });
+        }
+    }, [user, navigate]);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -41,13 +43,10 @@ const Login = () => {
                 response = await signIn({ email, password });
             }
 
-            if (response.error) {
-                // Supabase Auth hatalarını yakala
+            if (response?.error) {
                 throw response.error;
             }
-
         } catch (err) {
-            // Hata mesajını Supabase'den veya genel hata mesajından al
             setError(err.message || 'Bir hata oluştu. Lütfen tekrar deneyin.');
         } finally {
             setLoading(false);
@@ -75,21 +74,36 @@ const Login = () => {
                 {error && <Alert severity="error" sx={{ width: '100%', mb: 2 }}>{error}</Alert>}
 
                 <Box component="form" onSubmit={handleSubmit} noValidate sx={{ mt: 1, width: '100%' }}>
-
                     <TextField
-                        margin="normal" required fullWidth label="E-Posta Adresi" name="email"
-                        autoComplete="email" autoFocus value={email} onChange={(e) => setEmail(e.target.value)}
+                        margin="normal"
+                        required
+                        fullWidth
+                        label="E-Posta Adresi"
+                        name="email"
+                        autoComplete="email"
+                        autoFocus
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        disabled={loading}
+                    />
+                    <TextField
+                        margin="normal"
+                        required
+                        fullWidth
+                        name="password"
+                        label="Şifre"
+                        type="password"
+                        autoComplete="current-password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
                         disabled={loading}
                     />
 
-                    <TextField
-                        margin="normal" required fullWidth name="password" label="Şifre"
-                        type="password" autoComplete="current-password" value={password}
-                        onChange={(e) => setPassword(e.target.value)} disabled={loading}
-                    />
-
                     <Button
-                        type="submit" fullWidth variant="contained" sx={{ mt: 3, mb: 2, height: 50 }}
+                        type="submit"
+                        fullWidth
+                        variant="contained"
+                        sx={{ mt: 3, mb: 2, height: 50 }}
                         disabled={loading || !email || !password}
                     >
                         {loading ? (
@@ -103,9 +117,15 @@ const Login = () => {
                         <Link
                             href="#"
                             variant="body2"
-                            onClick={(e) => { e.preventDefault(); setIsSigningUp(!isSigningUp); setError(''); }}
+                            onClick={(e) => {
+                                e.preventDefault();
+                                setIsSigningUp(!isSigningUp);
+                                setError('');
+                            }}
                         >
-                            {isSigningUp ? 'Zaten hesabınız var mı? Giriş Yapın.' : 'Hesabınız yok mu? Hemen Kayıt Olun.'}
+                            {isSigningUp
+                                ? 'Zaten hesabınız var mı? Giriş Yapın.'
+                                : 'Hesabınız yok mu? Hemen Kayıt Olun.'}
                         </Link>
                     </Box>
                 </Box>
