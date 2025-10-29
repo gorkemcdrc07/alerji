@@ -3,31 +3,47 @@ import { Typography, Box, Button, Paper, Stack, CircularProgress } from '@mui/ma
 import QrCodeScannerIcon from '@mui/icons-material/QrCodeScanner';
 import VideocamOffIcon from '@mui/icons-material/VideocamOff';
 import { useNavigate } from 'react-router-dom';
-import { BrowserMultiFormatReader } from '@zxing/library';
-import { useZxing } from 'react-zxing';
+
+// YENİ KÜTÜPHANE IMPORT'U
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 const Scan = () => {
     const navigate = useNavigate();
     const [isScanning, setIsScanning] = useState(false);
     const [error, setError] = useState('');
+    const [lastScanResult, setLastScanResult] = useState(null);
 
-    const { ref } = useZxing({
-        onResult(result) {
-            if (result?.getText()) {
-                setIsScanning(false);
-                setError('');
-                navigate(`/result/${result.getText()}`);
-            }
-        },
-        onError(err) {
-            console.error(err);
-            setError('Kamera açılamadı veya bir hata oluştu. Lütfen izinleri kontrol edin.');
-            setIsScanning(false);
-        },
-        constraints: { facingMode: 'environment' }, // Arka kamerayı kullan
-    });
+    // Yeni kütüphanenin sonuç işleyici fonksiyonu
+    const handleScan = (result) => {
+        // result bir dizi olduğu için ilk sonucu alıyoruz
+        if (result && result.length > 0) {
+            const barcode = result[0].rawValue;
+            setLastScanResult(barcode); // Tarama başarılı
+            setIsScanning(false); // Kamerayı kapat
+            setError('');
+
+            // Sonuç sayfasına yönlendir
+            navigate(`/result/${barcode}`);
+        }
+    };
+
+    // Yeni kütüphanenin hata işleyici fonksiyonu
+    const handleError = (err) => {
+        // Tarayıcı izin reddi gibi spesifik hataları yakala
+        if (err.name === 'NotAllowedError') {
+            setError('Kamera erişimi reddedildi. Lütfen tarayıcı ayarlarından izin verin.');
+        } else if (err.name === 'NotFoundError') {
+            setError('Cihazda uygun kamera bulunamadı.');
+        } else {
+            // console.error(err); // Detaylı hataları konsola yazdır
+            setError('Tarama sırasında bilinmeyen bir hata oluştu.');
+        }
+        // Hata durumunda taramayı durdur
+        setIsScanning(false);
+    };
 
     const startScan = () => {
+        setLastScanResult(null);
         setIsScanning(true);
         setError('');
     };
@@ -63,36 +79,74 @@ const Scan = () => {
                 }}
             >
                 <Stack spacing={2} alignItems="center">
+
+                    {/* Tarayıcı Alanı */}
                     {isScanning ? (
-                        <Box sx={{ width: '100%', height: 300, overflow: 'hidden', borderRadius: 2, position: 'relative' }}>
-                            <video ref={ref} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            <CircularProgress sx={{ position: 'absolute', top: '50%', left: '50%', mt: '-12px', ml: '-12px' }} />
+                        <Box
+                            sx={{
+                                width: '100%',
+                                height: 300,
+                                overflow: 'hidden',
+                                borderRadius: 2,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}
+                        >
+                            <Scanner
+                                onScan={handleScan} // Başarılı taramada çağrılır
+                                onError={handleError} // Hata oluştuğunda çağrılır
+                                styles={{
+                                    container: { width: '100%', height: '100%' },
+                                    video: { objectFit: 'cover' }
+                                }}
+                            // constraints'i kaldırdık, tarayıcıya bırakıyoruz.
+                            />
                         </Box>
                     ) : (
+                        // Tarayıcı kapalıyken gösterilecek ikon
                         <QrCodeScannerIcon
                             sx={{
                                 fontSize: 100,
                                 color: 'primary.dark',
                                 transition: 'transform 0.3s ease-in-out',
-                                '&:hover': { transform: 'scale(1.05)' }
+                                '&:hover': {
+                                    transform: 'scale(1.05)'
+                                }
                             }}
                         />
                     )}
 
-                    <Typography variant="h5" component="h1" fontWeight="bold" color="primary.main" gutterBottom>
+                    <Typography
+                        variant="h5"
+                        component="h1"
+                        fontWeight="bold"
+                        color="primary.main"
+                        gutterBottom
+                    >
                         {isScanning ? 'Tarama Başlatıldı...' : 'Ürün Tarama Alanı'}
                     </Typography>
 
-                    <Typography variant="body2" color="text.secondary">
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                    >
                         {isScanning
                             ? 'Barkodu veya QR kodu kamera alanına ortalayın.'
-                            : 'Alerji kontrolü için barkodu taramak üzere butona basın.'}
+                            : 'Alerji kontrolü için barkodu taramak üzere butona basın.'
+                        }
                     </Typography>
 
-                    {error && <Typography variant="body2" color="error">{error}</Typography>}
+                    {/* Hata Mesajı */}
+                    {error && (
+                        <Typography variant="body2" color="error">
+                            {error}
+                        </Typography>
+                    )}
                 </Stack>
             </Paper>
 
+            {/* Tarama Butonu */}
             {!isScanning ? (
                 <Button
                     variant="contained"
@@ -138,6 +192,7 @@ const Scan = () => {
             >
                 Simülasyonla Test Et (869000000001)
             </Button>
+
         </Box>
     );
 };
